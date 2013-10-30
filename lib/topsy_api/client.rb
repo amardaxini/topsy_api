@@ -1,0 +1,273 @@
+require 'topsy_api/configurable'
+module TopsyApi
+  class Client
+    include HTTParty
+    format :json
+    base_uri "http://api.topsy.com/v2"
+
+    def get( path , opts = {} )
+      if @api_key.length > 0 
+        # Handle appending the api key
+        opts[:query] = {} unless opts.has_key?(:query)
+        opts[:query].merge!( { :apikey => options[:api_key] } )
+      end
+      self.class.get( path , opts )
+    end
+
+    def initialize( options = {} )
+      @api_key = TopsyApi.configure.apikey
+    end
+
+    # Returns info about API rate limiting
+    #
+    # @return [Topsy::RateLimitInfo]
+    def credit
+      handle_response(get("/credit.json"))
+    end
+    
+    # Provides a list of authors who mention the specified query term(s), 
+    # sorted by frequency of tweets and the author’s influence level.
+    # The response contains array of influencer
+    #
+    # @param [String] name
+    #   Name of authors separated by comma
+    # @return [Array<TopsyApi::Insight::Author>]
+    def author_info(name)
+      authorinfo = handle_response(get("/insights/author.json", :query => {:query => name}))
+      TopsyApi::Insight::Author.get_authors(authorinfo)
+
+    #
+    # @param [String] query
+    #   Terms to find influencers for. If no term is entered, no influencers are returned.
+    #  @param [String] sort_by_options  optional
+    #   sort_by_options value  is "relavance","retweets","tweets","influence","followers"
+    #  @param [Hash] filter parameters
+    #   http://api.topsy.com/doc/filter-parameters/
+    # @return [Array<TopsyApi::Insight::Influence>]
+    def influence(query=nil,sort_by_options=nil,filter_parameters={})
+      influence_info = handle_response(get("insights/influencers.json", :query => {:q => query,:sort_by=>sort_by_options,filter_parameters}))
+      TopsyApi::Insight::Influence.get_influence_info(influence_info)
+    end
+
+    # @param [String] query
+    #   Terms to find influencers for. If no term is entered, no influencers are returned.
+    #  @param [String] sort_by_options  optional
+    #   sort_by_options value  is "relavance","acceleration","total"
+    #  @param [Hash] filter parameters
+    #   http://api.topsy.com/doc/filter-parameters/
+    # @return [Array<TopsyApi::Insight::RelatedTerm>]
+    def related_terms(query=nil,sort_by_options=nil,filter_parameters={},include_metrics=false,include_tweet=false)
+      related_term_info = handle_response(get("insights/relatedterms.json", :query => {:q => query,:sort_by=>sort_by_options,filter_parameters}))
+      TopsyApi::Insight::RelatedTerm.get_related_term_info(related_term_info)
+    end
+
+    # Provides volume of tweet mentions over time for a list of keywords.
+    # @param [String] query  Query string optional
+    #   Terms to find influencers for. If no term is entered, no influencers are returned.
+    #  @param [Hash] slice  optional
+    # {:min_time=>1369945301,:max_time=>1370031701,:slice=>3600}
+    #   3600 if it is less than 1 day and greater than 1 hour, and 60 if it is less than 1 hour.
+    #  @param [Integer] cumulative
+    #   1 for enabling cumulative,metrics are cumulative from previous slice values.
+    #  @param [Hash] filter parameters
+    #   http://api.topsy.com/doc/filter-parameters/
+    #  @return [Array<TopsyApi::Metric::Mention>]
+    def mentions(query=nil,slice={},cumulative=0,filter_parameters={})
+      mention_info = handle_response(get("metrics/mentions.json", :query => {:q => query,slice,cumulative,filter_parameters}))
+    end
+
+    
+    # Returns list of authors that talk about the query. The list is sorted by frequency of posts and the influence of authors.
+    #
+    # @param [String] q the search query string
+    # @param [Hash] options method options
+    # @option options [Symbol] :window Time window for results. (default: :all) Options: :dynamic most relevant, :hour last hour, :day last day, :week last week, :month last month, :all all time. You can also use the h6 (6 hours) d3 (3 days) syntax. 
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Hashie::Mash]
+    def experts(q, options={})
+      options = set_window_or_default(options)
+      result = handle_response(get("/experts.json", :query => {:q => q}.merge(options)))
+      Topsy::Page.new(result, Topsy::Author)
+    end
+    
+    # Returns list of URLs posted by an author
+    #
+    # @param [String] url URL string for the author.
+    # @param [Hash] options method options
+    # @option options [String] :contains Query string to filter results
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Topsy::Page]
+    def link_posts(url, options={})
+      linkposts = handle_response(get("/linkposts.json", :query => {:url => url}.merge(options)))
+      Topsy::Page.new(linkposts,Topsy::Linkpost)
+    end
+    
+    # Returns count of links posted by an author. This is the efficient, count-only version of /linkposts
+    #
+    # @param [String] url URL string for the author.
+    # @param [Hash] options method options
+    # @option options [String] :contains Query string to filter results
+    # @return [Topsy::LinkpostCount]
+    def link_post_count(url, options={})
+      count = handle_response(get("/linkpostcount.json", :query => {:url => url}.merge(options)))
+      Topsy::LinkpostCount.new(count)
+    end
+
+    # Returns list of URLs related to a given URL
+    #
+    # @param [String] url URL string for the author.
+    # @param [Hash] options method options
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Topsy::Page]
+    def related(url, options={})
+      response = handle_response(get("/related.json", :query => {:url => url}.merge(options)))
+      Topsy::Page.new(response,Topsy::LinkSearchResult)
+    end
+    
+    # Returns list of results for a query.
+    #
+    # @param [String] q the search query string
+    # @param [Hash] options method options
+    # @option options [Symbol] :window Time window for results. (default: :all) Options: :dynamic most relevant, :hour last hour, :day last day, :week last week, :month last month, :all all time. You can also use the h6 (6 hours) d3 (3 days) syntax. 
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @option options [String] :site narrow results to a domain
+    # @return [Topsy::Page]
+    def search(q, options={})
+      if q.is_a?(Hash)
+        options = q
+        q = "site:#{options.delete(:site)}" if options[:site]
+      else
+        q += " site:#{options.delete(:site)}" if options[:site]
+      end
+      options = set_window_or_default(options)
+      results = handle_response(get("/search.json", :query => {:q => q}.merge(options)))
+      Topsy::Page.new(results,Topsy::LinkSearchResult)
+    end
+
+    # Returns count of results for a search query.
+    #
+    # @param [String] q the search query string
+    # @return [Topsy::SearchCounts]
+    def search_count(q)
+      counts = handle_response(get("/searchcount.json", :query => {:q => q}))
+      Topsy::SearchCounts.new(counts)
+    end
+
+    # Returns mention count data for the given query
+    # 
+    # @param [String] q - The query.  Use site:domain.com to get domain counts and @username to get mention counts.
+    # @param [String] count_method - what is being counted - "target" (default) -  the number of unique links , or "citation" - cthe number of unique tweets about links
+    # @param [Integer] slice - 
+    # @param [Integer] period -
+    # 
+    def search_histogram( q , count_method = 'target' , slice = 86400 , period = 30  )
+      response = handle_response(get("/searchhistogram.json" , :query => { :q => q , :slice => slice , :period => period , :count_method => count_method } ))
+      Topsy::SearchHistogram.new(response)
+    end
+    
+    # Returns counts of tweets for a URL
+    #
+    # @param [String] url the url to look up
+    # @param [Hash] options method options
+    # @option options [String] :contains Query string to filter results
+    # @return [Topsy::Stats]
+    def stats(url, options={})
+      query = {:url => url}
+      query.merge!(options)
+      response = handle_response(get("/stats.json", :query => query))
+      Topsy::Stats.new(response)
+    end
+    
+    # Returns list of tags for a URL.
+    #
+    # @param [String] url the search query string
+    # @param [Hash] options method options
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Topsy::Page]
+    def tags(url, options={})
+      response = handle_response(get("/tags.json", :query => {:url => url}.merge(options)))
+      Topsy::Page.new(response,Topsy::Tag)
+    end
+    
+    # Returns list of tweets (trackbacks) that mention the query URL, most recent first.
+    #
+    # @param [String] url URL string for the author.
+    # @param [Hash] options method options
+    # @option options [String] :contains Query string to filter results
+    # @option options [Boolean] :infonly filters trackbacks to influential only (default 0)
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Topsy::Page]
+    def trackbacks(url, options={})
+      results = handle_response(get("/trackbacks.json", :query => {:url => url}.merge(options)))
+      results.list.each do |trackback|
+        trackback.date = Time.at(trackback.date)
+      end
+      Topsy::Page.new(results,Topsy::Tweet)
+    end
+    
+    # Returns list of trending terms
+    #
+    # @param [Hash] options method options
+    # @option options [Integer] :page page number of the result set. (default: 1, max: 10)
+    # @option options [Integer] :perpage limit number of results per page. (default: 10, max: 50)
+    # @return [Topsy::Page]
+    def trending(options={})
+      response = handle_response(get("/trending.json", :query => options))
+      Topsy::Page.new(response,Topsy::Trend)
+    end
+    
+    # Returns info about a URL
+    #
+    # @param [String] url the url to look up
+    # @return [Topsy::UrlInfo]
+    def url_info(url)
+      response = handle_response(get("/urlinfo.json", :query => {:url => url}))
+      Topsy::UrlInfo.new(response)
+    end
+
+    private
+    
+      def set_window_or_default(options)
+        options[:window] = @@windows[options[:window]] if options[:window] && @@windows[options[:window]]
+        options
+      end
+
+      def handle_response(response)
+        raise_errors(response)
+        mashup(response)
+      end
+
+      def raise_errors(response)
+        code = response.code.to_i
+        case code
+        when 400
+          raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
+        when 403
+          raise TopsyApi::Unauthorized.new
+        when 404
+          raise TopsyApi::NotFound.new
+        when 500
+          raise TopsyApi::InformTopsy.new
+        when 503
+          raise TopsyApi::Unavailable.new
+        end
+      end
+
+      def mashup(response)
+        Hashie::Mash.new(response).response
+      end
+      
+      # extracts the header key
+      def extract_header_value(response, key)
+        response.headers[key].class == Array ? response.headers[key].first.to_i : response.headers[key].to_i 
+      end
+   
+
+  end
+end
