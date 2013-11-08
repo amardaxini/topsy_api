@@ -1,10 +1,10 @@
 require 'hashie'
 require 'httparty'
 require 'pry'
-require_relative "topsy_api/version"
-require_relative "topsy_api/client"
-require_relative "topsy_api/configuration"
-require_relative "topsy_api/errors"
+require "topsy_api/version"
+require "topsy_api/client"
+require "topsy_api/configuration"
+require "topsy_api/errors"
 
 
 module TopsyApi
