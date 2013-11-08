@@ -1,4 +1,4 @@
-require_relative 'configuration'
+require 'topsy_api/configuration'
 module TopsyApi
   class Client
     include HTTParty
