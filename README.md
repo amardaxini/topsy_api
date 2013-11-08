@@ -25,7 +25,7 @@ Or install it yourself as:
       config.licence = "licencenu"
     end
     #Get API key
-    Ups.configure.api_key = "API KEY"
+    TopsyApi.configure.api_key = "API KEY"
 
 
 ## Contributing
