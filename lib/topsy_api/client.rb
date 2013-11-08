@@ -97,13 +97,16 @@ module TopsyApi
     #   Terms to find influencers for. If no term is entered, no influencers are returned.
     #  
     #  @param [Hash] options optional 
-    #   {:limit"=>1,"include_enrichment_all"=>0,"include_enrichment_all"=>0,"new_only"=>0,:sort_by=>''}
+    #   {:include_enrichment_all"=>0,"sample"=>0}
     #   http://api.topsy.com/doc/filter-parameters/
     #  @return [Array<TopsyApi::Metric::Mention>]
     def bulk_tweets(query=nil,options={})
       handle_response(get("/content/bulktweets.json", :query => {:q => query}.merge(options)))
     end
 
+    def streaming(query,options={})
+      handle_response(get("/content/bulktweets.json", :query => {:q => query}.merge(options)))
+    end
     
     # Provides the top links for a list of terms and additional search parameters. The ranking is determined by the sort method.
     # The ranking is determined by the sort method.
