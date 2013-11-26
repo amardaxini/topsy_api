@@ -1,9 +1,13 @@
 require 'topsy_api/configuration'
 module TopsyApi
   class Client
-    include HTTParty
-    format :json
-    base_uri "http://api.topsy.com/v2"
+    
+    @@connection = Faraday.new(:url => 'http://api.topsy.com/v2') do |faraday|
+      faraday.request  :url_encoded             # form-encode POST params
+      faraday.response :logger                  # log requests to STDOUT
+      faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+    end
+    
     attr_accessor :api_key,:response,:mashie_response
     def get( path , opts = {} )
       if @api_key.length > 0 
@@ -11,7 +15,7 @@ module TopsyApi
         opts[:query] = {} unless opts.has_key?(:query)
         opts[:query].merge!( { :apikey => @api_key } )
       end
-      @response = self.class.get( path , opts )
+      @response = @@connection.get( path , opts )
     end
 
     def initialize( options = {} )
