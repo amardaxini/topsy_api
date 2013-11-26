@@ -192,7 +192,7 @@ module TopsyApi
     
       def handle_response(response)
         raise_errors(response)
-        mashup(response)
+        response
       end
 
       def raise_errors(response)
