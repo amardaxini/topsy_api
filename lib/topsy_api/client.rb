@@ -2,7 +2,7 @@ require 'topsy_api/configuration'
 module TopsyApi
   class Client
     
-    @@connection = Faraday.new(:url => 'http://api.topsy.com/v2') do |faraday|
+    @@connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
       faraday.request  :url_encoded             # form-encode POST params
       faraday.response :logger                  # log requests to STDOUT
       faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
@@ -15,7 +15,7 @@ module TopsyApi
         opts[:query] = {} unless opts.has_key?(:query)
         opts[:query].merge!( { :apikey => @api_key } )
       end
-      @response = @@connection.get( path , opts )
+      @response = @@connection.get( "/v2"+path , opts[:query] )
     end
 
     def initialize( options = {} )
@@ -200,7 +200,7 @@ module TopsyApi
       end
 
       def raise_errors(response)
-        code = response.code.to_i
+        code = response.status.to_i
         case code
         when 400
           raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
@@ -216,7 +216,8 @@ module TopsyApi
       end
 
       def mashup(response)
-        @mashie_response = Hashie::Mash.new(response)
+        # @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
+        @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
       end
       
       # extracts the header key
