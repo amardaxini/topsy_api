@@ -217,7 +217,10 @@ module TopsyApi
 
       def mashup(response)
         # @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
-        @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
+        begin
+            @mashie_response = (JSON.parse(response.body))
+        rescue =>error
+        end    
       end
       
       # extracts the header key
