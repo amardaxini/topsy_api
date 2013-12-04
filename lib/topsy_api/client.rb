@@ -11,7 +11,7 @@ module TopsyApi
         opts[:query].merge!( { :apikey => @api_key } )
       end
       begin
-
+        opts[:query].merge!(:format=>"json")
         uri = URI("http://api.topsy.com/v2"+path)
         uri.query = URI.encode_www_form(opts[:query] )
         @response =  Net::HTTP.get_response(uri)
@@ -196,6 +196,7 @@ module TopsyApi
     
     def handle_response(response)
       raise_errors(response)
+
       mashup(response)
 
     end
@@ -221,9 +222,10 @@ module TopsyApi
       begin
         # @mashie_response = (JSON.parse(response.body))
         # @mashie_response = (JSON.parse(response.body))
-        @mashie_response = Oj.dump(response.body)
+        @mashie_response = Oj.load(response.body)
 
       rescue =>error
+
       end    
     end
 
