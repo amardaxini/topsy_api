@@ -1,6 +1,7 @@
 require 'topsy_api/configuration'
 require 'oj'
 require 'excon'
+require 'faraday'
 module TopsyApi
   class Client
     attr_accessor :api_key,:response,:mashie_response
@@ -14,7 +15,15 @@ module TopsyApi
         opts[:query].merge!(:format=>"json")
         uri = URI("http://api.topsy.com/v2"+path)
         uri.query = URI.encode_www_form(opts[:query] )
-        @response= Excon.get("http://api.topsy.com/v2"+path,:query=>opts[:query])
+        conn = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
+            faraday.request  :url_encoded             # form-encode POST params
+            faraday.response :logger                  # log requests to STDOUT
+            faraday.adapter  :excon # make requests with Net::HTTP
+        end
+        conn.get('/v2'+path,opts[:query])
+        # uri = URI("http://api.topsy.com/v2"+path)
+        # uri.query = URI.encode_www_form(opts[:query] )
+        # @response= Excon.get("http://api.topsy.com/v2"+path,:query=>opts[:query])
         # @response =  Net::HTTP.get_response(uri)
       rescue
       end  
