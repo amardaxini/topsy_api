@@ -15,7 +15,15 @@ module TopsyApi
         opts[:query] = {} unless opts.has_key?(:query)
         opts[:query].merge!( { :apikey => @api_key } )
       end
-      @response = @@connection.get( "/v2"+path , opts[:query] )
+      begin
+        @connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
+            faraday.request  :url_encoded             # form-encode POST params
+            faraday.response :logger                  # log requests to STDOUT
+            faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+        end
+        @response = @connection.get( "/v2"+path , opts[:query] )
+      rescue
+      ebd  
     end
 
     def initialize( options = {} )
