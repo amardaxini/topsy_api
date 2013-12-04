@@ -1,13 +1,8 @@
 require 'topsy_api/configuration'
+require 'oj'
+
 module TopsyApi
   class Client
-    
-    # @@connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
-    #   faraday.request  :url_encoded             # form-encode POST params
-    #   faraday.response :logger                  # log requests to STDOUT
-    #   faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
-    # end
-    
     attr_accessor :api_key,:response,:mashie_response
     def get( path , opts = {} )
       if @api_key.length > 0 
@@ -16,12 +11,7 @@ module TopsyApi
         opts[:query].merge!( { :apikey => @api_key } )
       end
       begin
-        # @connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
-        #     faraday.request  :url_encoded             # form-encode POST params
-        #     faraday.response :logger                  # log requests to STDOUT
-        #     faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
-        # end
-        # @response = @connection.get( "/v2"+path , opts[:query] )
+
         uri = URI("http://api.topsy.com/v2"+path)
         uri.query = URI.encode_www_form(opts[:query] )
         @response =  Net::HTTP.get_response(uri)
@@ -48,8 +38,8 @@ module TopsyApi
     #   Name of authors separated by comma
     # @return [Array<TopsyApi::Insight::Author>]
     def author_info(name)
-       handle_response(get("/insights/author.json", :query => {:query => name}))
-      
+      handle_response(get("/insights/author.json", :query => {:query => name}))
+
     end  
     #
     # @param [String] query
@@ -72,7 +62,6 @@ module TopsyApi
     # @return [Array<TopsyApi::Insight::RelatedTerm>]
     def related_terms(query=nil,sort_by_options=nil,filter_parameters={},include_metrics=false,include_tweet=false)
       handle_response(get("insights/relatedterms.json", :query => {:q => query,:sort_by=>sort_by_options}))
-      
     end
 
     # Provides volume of tweet mentions over time for a list of keywords.
@@ -205,41 +194,44 @@ module TopsyApi
     end
     private
     
-      def handle_response(response)
-        raise_errors(response)
-        mashup(response)
+    def handle_response(response)
+      raise_errors(response)
+      mashup(response)
 
-      end
+    end
 
-      def raise_errors(response)
-        code = response.code.to_i
-        case code
-        when 400
-          raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
-        when 403
-          raise TopsyApi::Unauthorized.new
-        when 404
-          raise TopsyApi::NotFound.new
-        when 500
-          raise TopsyApi::InformTopsy.new
-        when 503
-          raise TopsyApi::Unavailable.new
-        end
+    def raise_errors(response)
+      code = response.code.to_i
+      case code
+      when 400
+        raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
+      when 403
+        raise TopsyApi::Unauthorized.new
+      when 404
+        raise TopsyApi::NotFound.new
+      when 500
+        raise TopsyApi::InformTopsy.new
+      when 503
+        raise TopsyApi::Unavailable.new
       end
+    end
 
-      def mashup(response)
-        # @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
-        begin
-            @mashie_response = (JSON.parse(response.body))
-        rescue =>error
-        end    
-      end
-      
+    def mashup(response)
+    # @mashie_response = Hashie::Mash.new(JSON.parse(response.body))
+      begin
+        # @mashie_response = (JSON.parse(response.body))
+        # @mashie_response = (JSON.parse(response.body))
+        @mashie_response = Oj.dump(response.body)
+
+      rescue =>error
+      end    
+    end
+
       # extracts the header key
       def extract_header_value(response, key)
         response.headers[key].class == Array ? response.headers[key].first.to_i : response.headers[key].to_i 
       end
-   
 
+
+    end
   end
-end

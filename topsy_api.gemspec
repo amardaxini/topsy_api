@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = TopsyApi::VERSION
   spec.authors       = ["Amar Daxini"]
   spec.email         = ["amardaxini@gmail.com"]
-  spec.description   = %q{TODO: Write a gem description}
-  spec.summary       = %q{TODO: Write a gem summary}
+  spec.description   = %q{"Topsy API Ruby Wrapper"}
+  spec.summary       = %q{Topsy API Ruby Wrapper"}
   spec.homepage      = ""
   spec.license       = "MIT"
 
@@ -17,9 +17,8 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
-
-  spec.add_dependency 'faraday', '~>0.8.8'
-  spec.add_dependency 'excon', '~>0.30.0'
+  spec.add_dependency "oj"
   spec.add_development_dependency "bundler", "~> 1.3"
+  
   spec.add_development_dependency "rake"
 end
