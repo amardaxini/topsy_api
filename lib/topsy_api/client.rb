@@ -2,11 +2,11 @@ require 'topsy_api/configuration'
 module TopsyApi
   class Client
     
-    @@connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
-      faraday.request  :url_encoded             # form-encode POST params
-      faraday.response :logger                  # log requests to STDOUT
-      faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
-    end
+    # @@connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
+    #   faraday.request  :url_encoded             # form-encode POST params
+    #   faraday.response :logger                  # log requests to STDOUT
+    #   faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+    # end
     
     attr_accessor :api_key,:response,:mashie_response
     def get( path , opts = {} )
@@ -16,12 +16,15 @@ module TopsyApi
         opts[:query].merge!( { :apikey => @api_key } )
       end
       begin
-        @connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
-            faraday.request  :url_encoded             # form-encode POST params
-            faraday.response :logger                  # log requests to STDOUT
-            faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
-        end
-        @response = @connection.get( "/v2"+path , opts[:query] )
+        # @connection = Faraday.new(:url => 'http://api.topsy.com') do |faraday|
+        #     faraday.request  :url_encoded             # form-encode POST params
+        #     faraday.response :logger                  # log requests to STDOUT
+        #     faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+        # end
+        # @response = @connection.get( "/v2"+path , opts[:query] )
+        uri = URI("http://api.topsy.com/v2"+path)
+        uri.query = URI.encode_www_form(opts[:query] )
+        @response =  Net::HTTP.get_response(uri)
       rescue
       end  
     end
@@ -205,10 +208,11 @@ module TopsyApi
       def handle_response(response)
         raise_errors(response)
         mashup(response)
+
       end
 
       def raise_errors(response)
-        code = response.status.to_i
+        code = response.code.to_i
         case code
         when 400
           raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
