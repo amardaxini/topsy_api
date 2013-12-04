@@ -1,6 +1,6 @@
 require 'topsy_api/configuration'
 require 'oj'
-
+require 'excon'
 module TopsyApi
   class Client
     attr_accessor :api_key,:response,:mashie_response
@@ -14,7 +14,8 @@ module TopsyApi
         opts[:query].merge!(:format=>"json")
         uri = URI("http://api.topsy.com/v2"+path)
         uri.query = URI.encode_www_form(opts[:query] )
-        @response =  Net::HTTP.get_response(uri)
+        @response= Excon.get("http://api.topsy.com/v2"+path,:query=>opts[:query])
+        # @response =  Net::HTTP.get_response(uri)
       rescue
       end  
     end
@@ -202,7 +203,7 @@ module TopsyApi
     end
 
     def raise_errors(response)
-      code = response.code.to_i
+      code = response.status.to_i
       case code
       when 400
         raise TopsyApi::General.new("Parameter check failed. This error indicates that a required parameter is missing or a parameter has a value that is out of bounds.")
