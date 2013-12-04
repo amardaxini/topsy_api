@@ -23,7 +23,7 @@ module TopsyApi
         end
         @response = @connection.get( "/v2"+path , opts[:query] )
       rescue
-      ebd  
+      end  
     end
 
     def initialize( options = {} )
